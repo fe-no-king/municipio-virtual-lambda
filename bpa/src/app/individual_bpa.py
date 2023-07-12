@@ -1,19 +1,30 @@
-from api.medical_care_api import list as medical_care
+from src.api.medical_care_api import list as medical_care
 
-from utils.validate_cns import validate_cns
-from utils.format_date import format_date
-from utils.format_date import format_date_month
-from utils.format_date import date_month_format
-from utils.format_date import format_date_br
-from utils.format_date import calculate_age
-from utils.accents import remove_accents
+from src.utils.validate_cns import validate_cns
+from src.utils.format_date import format_date
+from src.utils.format_date import format_date_month
+from src.utils.format_date import date_month_format
+from src.utils.format_date import format_date_br
+from src.utils.format_date import calculate_age
+from src.utils.accents import remove_accents
 
-from api.service_units_api import list_current as service_units
-from api.login_api import login_api
-from utils.validate_cep import validate_cep
-from utils.tab_file import line_mount
+from src.api.service_units_api import list_current as service_units
+from src.api.login_api import login_api
+from src.utils.validate_cep import validate_cep
+from src.utils.tab_file import line_mount
+from src.api.medical_care_api import update_path
+
+import tempfile
+import random
+import string
+import boto3
+import os
 
 def main(IdBpaIndividual):
+
+    s3 = boto3.client('s3')
+
+    tmp_dir = tempfile.gettempdir()
 
     login = login_api()
     access_token = login.get('access_token', None)
@@ -43,10 +54,31 @@ def main(IdBpaIndividual):
         'version': bpa_data.get('version'),
     })
 
-    file_path = f"PA{unit}{date_month}.{month}"
-    with open(file_path, 'w') as file:
+    length = 10
+    allowed_characters = string.ascii_letters + string.digits
+    file_name = ''.join(random.choice(allowed_characters) for _ in range(length))
+
+    file_path = f"bpa_individua/{IdBpaIndividual}/PAMVS{unit}{date_month}.{month}"
+    file_tmp = os.path.join(tmp_dir, file_name)
+
+    with open(file_tmp, 'w') as file:
         file.write(header)
         file.write(body.get('data'))
+
+    s3.upload_file(file_tmp, os.getenv('AWS_BUCKET'), file_path)
+
+    s3.put_object_acl(
+        ACL='public-read',
+        Bucket=os.getenv('AWS_BUCKET'),
+        Key=file_path
+    )
+
+    update_path(access_token, IdBpaIndividual, {
+        "path": file_path,
+    })
+
+    os.remove(file_tmp)
+    
 
 def mount_header(data):
 
@@ -148,7 +180,7 @@ def mount_body(access_token, IdBpaIndividual):
                             {'length': 15, 'text': val.get('patient_cns')}, # cns paciente
                             {'length': 1, 'text': val.get('patient_sex').upper()}, # sexo paciente
                             {'length': 6, 'text': '310400'}, # CODE Municipio IBGE
-                            {'length': 4, 'text': '    '}, # CID 10
+                            {'length': 4, 'text': val.get('cid_10', 'Z00')}, # CID 10
                             {'length': 3, 'text': calculate_age(val.get('patient_date_birth')), 'complete': '0', 'position': 'left'}, # Idade paciente
                             {'length': 6, 'text': '000001'}, # QUANTIDADE DE PROCEDIMENTO
                             {'length': 2, 'text': '02'}, # CARATER DO ATENDIMENTO

@@ -2,7 +2,7 @@ import requests
 import base64
 import os
 
-from utils.base64_encode import base64_encode
+from src.utils.base64_encode import base64_encode
 
 def list(access_token, IdBpaIndividual, page=1):
 

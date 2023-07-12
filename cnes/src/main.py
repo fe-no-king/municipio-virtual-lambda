@@ -1,13 +1,13 @@
 from dotenv import load_dotenv
 import os
 
-from api.login_api import login_api
-from api.bpa_doctors_list_api import list as bpa_doctors_list_api
-from api.bpa_doctors_list_api import update as update_doctors
-from api.bpa_doctors_list_api import update_end
-from api.cnes_api import list as cnes_api
+from src.api.login_api import login_api
+from src.api.bpa_doctors_list_api import list as bpa_doctors_list_api
+from src.api.bpa_doctors_list_api import update as update_doctors
+from src.api.bpa_doctors_list_api import update_end
+from src.api.cnes_api import list as cnes_api
 
-from utils.validate_cns import validate_cns
+from src.utils.validate_cns import validate_cns
 
 # Load environment variables from the .env file
 load_dotenv()
@@ -89,5 +89,3 @@ def main(body):
             "status": 'e'
         })
 
-
-main({'IdServiceUnits': 3, 'IdBpaIndividual': 5, 'code': '2165643', 'competence': '05-2023'})
